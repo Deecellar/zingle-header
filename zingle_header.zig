@@ -105,3 +105,7 @@ pub fn addSingleHeaderFile(exeLibObj: *std.build.LibExeObjStep, path: []const u8
     exeLibObj.addCSourceFileSource(cSource);
     return zingle_step;
 }
+
+pub fn free(self: *const Self) void {
+    self.builder.allocator.destroy(self);
+}

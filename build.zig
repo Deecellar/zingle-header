@@ -16,7 +16,8 @@ pub fn build(b: *std.build.Builder) void {
     var defines = [_][]const u8{
         "HELLO_WORLD_IMPL",
     };
-    _ = zingle.addSingleHeaderFile(exe, "src/hello.h", &defines, &.{});
+    var singleMem = zingle.addSingleHeaderFile(exe, "src/hello.h", &defines, &.{});
+    defer singleMem.free();
     exe.addIncludePath("src");
     exe.setTarget(target);
     exe.setBuildMode(mode);
