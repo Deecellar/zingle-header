@@ -107,5 +107,9 @@ pub fn addSingleHeaderFile(exeLibObj: *std.build.LibExeObjStep, path: []const u8
 }
 
 pub fn free(self: *const Self) void {
+    for (self.defines) |v| {
+        self.builder.allocator.free(v);
+    }
+    self.builder.allocator.free(self.defines);
     self.builder.allocator.destroy(self);
 }
