@@ -1,7 +1,7 @@
 # zingle-header
 Simple Step for adding single source files
 
-Just add the the file zingle_header.zig to your build file and add it either as a step or use the helper function (That I think it leaks, but eh)
+Just add the the file zingle_header.zig to your build file and add it either as a step or use the helper function 
 
 example in build.zig =)
 
