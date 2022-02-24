@@ -1,7 +1,7 @@
 const std = @import("std");
-const stbImage = @cImport(@cInclude("stb_image.h"));
+const hello = @cImport(@cInclude("hello.h"));
 pub fn main() anyerror!void {
-    _ = stbImage;
+    hello.helloWorld();
     std.log.info("All your codebase are belong to us.", .{});
 }
 

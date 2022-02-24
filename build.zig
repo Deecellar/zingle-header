@@ -14,9 +14,9 @@ pub fn build(b: *std.build.Builder) void {
     const exe = b.addExecutable("zingle-header", "src/main.zig");
     exe.linkLibC();
     var defines = [_][]const u8{
-        "STB_IMAGE_IMPLEMENTATION",
+        "HELLO_WORLD_IMPL",
     };
-    _ = zingle.addSingleHeaderFile(exe, "src/stb_image.h", &defines, &.{});
+    _ = zingle.addSingleHeaderFile(exe, "src/hello.h", &defines, &.{});
     exe.addIncludePath("src");
     exe.setTarget(target);
     exe.setBuildMode(mode);
