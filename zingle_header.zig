@@ -3,26 +3,32 @@ const Self = @This();
 
 step: std.build.Step,
 builder: *std.build.Builder,
-source: std.build.FileSource,
+source: []std.build.FileSource,
 defines: [][]const u8,
 output_file: std.build.GeneratedFile,
 /// Allocates a ZingleHeaderStep, caller owns memory
-pub fn create(builder: *std.build.Builder, file: []const u8, defines: [][]const u8) *Self {
-    return createSource(builder, .{ .path = file }, defines);
+pub fn create(builder: *std.build.Builder, files: [][]const u8, defines: [][]const u8) *Self {
+    var sources = builder.allocator.alloc(std.build.FileSource, files.len) catch unreachable;
+    for(files) |v,i| {
+        sources[i] = .{.path = builder.allocator.dupe(u8, v) catch unreachable};
+    }
+    return createSource(builder, sources, defines);
 }
 
 /// Allocates a ZingleHeaderStep, caller owns memory
-pub fn createSource(builder: *std.build.Builder, source: std.build.FileSource, defines: [][]const u8) *Self {
+pub fn createSource(builder: *std.build.Builder, sources: []std.build.FileSource, defines: [][]const u8) *Self {
     const self = builder.allocator.create(Self) catch unreachable;
     self.defines = builder.allocator.dupe([]const u8, defines) catch unreachable;
     self.* = Self{
         .step = std.build.Step.init(.custom, "single-header", builder.allocator, make),
         .builder = builder,
-        .source = source,
+        .source = sources,
         .defines = self.builder.dupeStrings(defines),
         .output_file = std.build.GeneratedFile{ .step = &self.step },
     };
-    source.addStepDependencies(&self.step);
+    for (sources) |source| {
+        source.addStepDependencies(&self.step);
+    }
     return self;
 }
 pub fn getFileSource(self: *const Self) std.build.FileSource {
@@ -31,7 +37,7 @@ pub fn getFileSource(self: *const Self) std.build.FileSource {
 
 fn make(step: *std.build.Step) !void {
     const self = @fieldParentPtr(Self, "step", step);
-    const source_file_name = self.source.getPath(self.builder);
+    const source_file_name = self.source[0].getPath(self.builder);
 
     // std.debug.print("source = '{s}'\n", .{source_file_name});
 
@@ -57,8 +63,9 @@ fn make(step: *std.build.Step) !void {
     for (self.defines) |m| {
         try writer.print("#define {s}\n", .{m});
     }
-    try writer.print("#include \"{s}\"\n", .{self.source.getPath(self.builder)});
-
+    for (self.source) |s| {
+        try writer.print("#include \"{s}\"\n", .{s.getPath(self.builder)});
+    }
     var hash = std.crypto.hash.blake2.Blake2b384.init(.{});
 
     hash.update("C9XVU4MxSDFZz2to");
@@ -97,19 +104,26 @@ fn make(step: *std.build.Step) !void {
 }
 
 /// Allocates a ZingleHeaderStep, caller owns memory
-pub fn addSingleHeaderFile(exeLibObj: *std.build.LibExeObjStep, path: []const u8, defines: [][]const u8, flags: [][]const u8) *Self {
-    var zingle_step = create(exeLibObj.builder, path, defines);
+pub fn addSingleHeaderFiles(exeLibObj: *std.build.LibExeObjStep, paths: [][]const u8, defines: [][]const u8, flags: [][]const u8) *Self {
+    var zingle_step = create(exeLibObj.builder, paths, defines);
     zingle_step.step.make() catch unreachable;
     var cSource = std.build.CSourceFile{ .source = zingle_step.getFileSource(), .args = flags };
     exeLibObj.step.dependOn(&zingle_step.step);
     exeLibObj.addCSourceFileSource(cSource);
     return zingle_step;
 }
+pub fn addSingleHeaderFile(exeLibObj: *std.build.LibExeObjStep, path: []const u8, defines: [][]const u8, flags: [][]const u8) *Self {
+    return addSingleHeaderFiles(exeLibObj,&.{path},defines,flags);
+}
 
 pub fn free(self: *const Self) void {
     for (self.defines) |v| {
         self.builder.allocator.free(v);
     }
+    for(self.source) |v| {
+        self.builder.allocator.free(v.path);
+    }
     self.builder.allocator.free(self.defines);
+    self.builder.allocator.free(self.source);
     self.builder.allocator.destroy(self);
 }
